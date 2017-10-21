@@ -23,7 +23,7 @@ namespace DataVisualizer
 
         private static string File_Output { get; set; }
         private static string File_Input { get; set; }
-        private static string Input_Directory = @"D:\Roms"; // TODO: Use Command line args or Config file
+        private static string Input_Directory { get; set; }
 
         /// <summary>
         /// Main entry point
@@ -31,33 +31,56 @@ namespace DataVisualizer
         /// <param name="args"></param>
         static void Main(string[] args)
         {
-            // Directory of Files to convert
-            DirectoryInfo dir = new DirectoryInfo(Input_Directory);
 
-            // create output directory
-            if (!Directory.Exists($@"{dir.FullName}\output"))
-                Directory.CreateDirectory($@"{dir.FullName}\output");
-
-            // Iterate over each file
-            foreach (var item in dir.EnumerateFiles())
+            try
             {
-                Console.Write($"Processing: {item.Name}\t\t\t\t\t\r");
+                Input_Directory = args[0];
+            }
+            catch
+            {
+                Console.WriteLine($"Input Directory not defined. Generating Random Image... ");
+            }
+            
+            // No comand line args supplied. generate random image in working dir
+            if (string.IsNullOrEmpty(Input_Directory))
+            {
+                byte[] bytes = ByteArray();
+                File_Output = $@"{Environment.CurrentDirectory}\Random.bmp";
 
-                // clear out list
-                Byte_List.Clear();
-
-                // Generate the custom header.
-                // this isnt fully working yet
-                //ConstructFileHeader();
-
-                File_Output = $@"{dir.FullName}\img\{item.Name.Substring(0, item.Name.IndexOf("."))}.bmp";
-
-                // first lets generate the byte array
-                byte[] bytes = ByteArray(item.FullName);
-                
                 // then append it to a file
                 AppendFile(bytes);
             }
+            else
+            {
+                // Directory of Files to convert
+                DirectoryInfo dir = new DirectoryInfo(Input_Directory);
+
+                // create output directory
+                if (!Directory.Exists($@"{dir.FullName}\output"))
+                    Directory.CreateDirectory($@"{dir.FullName}\output");
+
+                // Iterate over each file
+                foreach (var item in dir.EnumerateFiles())
+                {
+                    Console.Write($"Processing: {item.Name}\t\t\t\t\t\r");
+
+                    // clear out list
+                    Byte_List.Clear();
+
+                    // Generate the custom header.
+                    // this isnt fully working yet
+                    //ConstructFileHeader();
+
+                    File_Output = $@"{dir.FullName}\output\{item.Name.Substring(0, item.Name.IndexOf("."))}.bmp";
+
+                    // first lets generate the byte array
+                    byte[] bytes = ByteArray(item.FullName);
+
+                    // then append it to a file
+                    AppendFile(bytes);
+                }
+            }
+            
         }
 
         /// <summary>
@@ -226,10 +249,10 @@ namespace DataVisualizer
 
                     // Every third byte we need to append 2 empty bytes
                     // this is data about the pixel
-                    if ((i % 2) == 0)
+                    if ((i % 5) == 0)
                     {
-                        Byte_List.Add(0x00);
-                        Byte_List.Add(0x00);
+                        //Byte_List.Add(0x00);
+                        //Byte_List.Add(0x00);
                     }
                 }
             }
