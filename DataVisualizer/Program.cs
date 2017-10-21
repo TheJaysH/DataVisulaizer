@@ -158,7 +158,7 @@ namespace DataVisualizer
             Header[53] = 0x00;  // 35
             #endregion
 
-            #region 4x4 Test Pixels
+            #region 2x2 Test Pixels
             //Header[54] = 0x00;  // 36
             //Header[55] = 0x00;  // 37
             //Header[56] = 0xFF;  // 38
