@@ -59,6 +59,7 @@ namespace DataVisualizer
                 AppendFile(bytes);
             }
         }
+
         /// <summary>
         /// This is not yet fully implimented
         /// Im essentially creating my own file header.
@@ -199,17 +200,6 @@ namespace DataVisualizer
                 Byte_List.Add(byt);
             }
 
-            /// This loop is used when using my custom header. NOT the static
-            //for (int i = 0; i < BMP_Header.Length; i++)
-            //{
-            //    Byte_List.Add(BMP_Header[i]);
-            //    if ((i%2) == 0)
-            //    {
-            //        Byte_List.Add(0x00);
-            //        Byte_List.Add(0x00);
-            //    }
-            //}
-
             // We have not specifed an input, generate random data
             if (string.IsNullOrEmpty(file))
             {
@@ -234,7 +224,7 @@ namespace DataVisualizer
                 {
                     Byte_List.Add(bytes[i]);
 
-                    // Every third byte we need to append to empty bytes
+                    // Every third byte we need to append 2 empty bytes
                     // this is data about the pixel
                     if ((i % 2) == 0)
                     {
@@ -244,10 +234,14 @@ namespace DataVisualizer
                 }
             }
            
-            // cool our list is full... now return it as an array to be appened
+            // cool our list is full... now return it as an array to be appened to a file
             return Byte_List.ToArray();
         }
 
+        /// <summary>
+        /// This will generate a byte array with 3 random bytes.
+        /// </summary>
+        /// <returns></returns>
         private static byte[] GenerateBytes()
         {
             // first create a random object.
