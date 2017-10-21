@@ -23,7 +23,7 @@ namespace DataVisualizer
 
         private static string File_Output { get; set; }
         private static string File_Input { get; set; }
-        private static string Input_Directory { get; set; }
+        private static string Input_Directory = @"D:\Roms"; // TODO: Use Command line args or Config file
 
         /// <summary>
         /// Main entry point
@@ -32,11 +32,11 @@ namespace DataVisualizer
         static void Main(string[] args)
         {
             // Directory of Files to convert
-            DirectoryInfo dir = new DirectoryInfo(@"D:\Roms");
+            DirectoryInfo dir = new DirectoryInfo(Input_Directory);
 
             // create output directory
-            if (!Directory.Exists($@"{dir.FullName}\img"))
-                Directory.CreateDirectory($@"{dir.FullName}\img");
+            if (!Directory.Exists($@"{dir.FullName}\output"))
+                Directory.CreateDirectory($@"{dir.FullName}\output");
 
             // Iterate over each file
             foreach (var item in dir.EnumerateFiles())
