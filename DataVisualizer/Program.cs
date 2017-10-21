@@ -32,6 +32,8 @@ namespace DataVisualizer
         static void Main(string[] args)
         {
 
+            Input_Directory = @"D:\roms";
+
             try
             {
                 Input_Directory = args[0];
@@ -62,7 +64,7 @@ namespace DataVisualizer
                 // Iterate over each file
                 foreach (var item in dir.EnumerateFiles())
                 {
-                    Console.Write($"Processing: {item.Name}\t\t\t\t\t\r");
+                    Console.WriteLine($"Processing: {item.Name}");
 
                     // clear out list
                     Byte_List.Clear();
