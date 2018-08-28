@@ -9,13 +9,14 @@ namespace DataVisualizer
     {      
         static void Main(string[] args)
         {
+            // Exit if no args have been passed
             if (args.Length == 0)
             {
                 Console.WriteLine("Please provide file/folder as argument");
                 Console.ReadKey();
                 Environment.Exit(1);
             }
-
+            
             ParseArgs(args);            
         }
 
@@ -44,6 +45,7 @@ namespace DataVisualizer
                 ProcessFile(file.FullName);
             }
         }
+
 
         private static void ProcessFile(string file)
         {
@@ -86,11 +88,19 @@ namespace DataVisualizer
 
         private static byte[] ConstructFileHeader(byte[] bytes)
         {
-            var sqrt = Math.Sqrt(bytes.Length);  
-            
-            var t = (int)Math.Floor(sqrt);
+            var sqrt = Math.Sqrt(bytes.Length);
+            var t = (int)Math.Round(sqrt, 0);
+
+            //var p = (t / 16);
+            //var h = p * 12;
+            //var w = p * 4;
+
+            //var p = (t / 7);
+            //var h = p * 5;
+            //var w = p * 2;
+
             var h = t / 2;
-            var w = t / 2; 
+            var w = t / 2;
 
             byte[] width = GetBytes(w);
             byte[] height = GetBytes(h);
@@ -219,8 +229,9 @@ namespace DataVisualizer
             {
                 byteList.Add(header[i]);
             }
-            
-            for (int i = 0; i < bytes.Length; i++)
+
+            for (int i = bytes.Length - 1; i > 0; i--)
+            //for (int i = 0; i < bytes.Length; i++)
             {
                 byteList.Add(bytes[i]);
             }
