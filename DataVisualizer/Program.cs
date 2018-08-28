@@ -8,67 +8,68 @@ namespace DataVisualizer
     class Program
     {
        
-        private static List<byte> ByteList = new List<byte>();
-
-     
-        private static string FileOutput { get; set; }
-        private static string File_Input { get; set; }
-        private static string Input_Directory { get; set; }
-
         /// <summary>
         /// Main entry point
         /// </summary>
         /// <param name="args"></param>
         static void Main(string[] args)
         {
+            ParseArgs(args);            
+        }
 
-            Input_Directory = @"C:\Temp\Image";
-
-            try
+        private static void ParseArgs(string[] args)
+        {
+            if (args.Length == 0)
             {
-                Input_Directory = args[0];
+                Console.WriteLine("Please provide file/folder as argument");
+                Console.ReadKey();
+                Environment.Exit(1);
             }
-            catch
-            {
-                Console.WriteLine($"Input Directory not defined. Generating Random Image... ");
-            }
-            
-            // No comand line args supplied. generate random image in working dir
-            if (string.IsNullOrEmpty(Input_Directory))
-            {
-                byte[] bytes = ByteArray();
-                FileOutput = $@"{Environment.CurrentDirectory}\Random.bmp";
 
-                // then append it to a file
-                AppendFile(bytes);
-            }
-            else
-            {
-                // Directory of Files to convert
-                DirectoryInfo dir = new DirectoryInfo(Input_Directory);
+            bool isFile = new FileInfo(args[0]).Exists;
+            bool isFolder = new DirectoryInfo(args[0]).Exists;
 
-                // create output directory
+            if (!isFile && !isFolder)
+            {
+                throw new Exception("Argument provided is neither a filer or a folder");
+            }
+
+            if (isFolder)
+            {
+                DirectoryInfo dir = new DirectoryInfo(args[0]);
+
                 if (!Directory.Exists($@"{dir.FullName}\output"))
                     Directory.CreateDirectory($@"{dir.FullName}\output");
 
-                // Iterate over each file
                 foreach (var item in dir.EnumerateFiles())
                 {
-                    Console.WriteLine($"Processing: {item.Name}");
-
-                    // clear out list
-                    ByteList.Clear();
-
-                    FileOutput = $@"{dir.FullName}\output\{item.Name.Substring(0, item.Name.IndexOf("."))}.bmp";
-
-                    // first lets generate the byte array
-                    byte[] bytes = ByteArray(item.FullName);
-
-                    // then append it to a file
-                    AppendFile(bytes);
+                    ProcessFile(item.FullName);
                 }
             }
-            
+            else if (isFile)
+            {
+                FileInfo file = new FileInfo(args[0]);
+                ProcessFile(file.FullName);
+            }
+        }
+
+        private static void ProcessFile(string file)
+        {
+            FileInfo item = new FileInfo(file);
+
+            Console.WriteLine($"Processing: {item.Name}");
+         
+            var outputDir = $"{item.DirectoryName}\\output";
+            var outputFile = $"{outputDir}\\{item.Name}.bmp";
+
+            if (!Directory.Exists(outputDir))
+            {
+                Directory.CreateDirectory(outputDir);
+            }
+
+            byte[] bytes = ByteArray(item.FullName);
+
+            AppendFile(bytes, outputFile);
         }
 
         private static byte[] GetBytes(int value, int length = 4)
@@ -229,32 +230,36 @@ namespace DataVisualizer
             return header;
         }
 
-        private static void AppendFile(byte[] bytes)
+        private static void AppendFile(byte[] bytes, string file)
         {
-            // delete the file
-            File.Delete(FileOutput);
-
-            // append our bytes
-            File.WriteAllBytes(FileOutput, bytes);
+            try
+            {
+                File.WriteAllBytes(file, bytes);
+            }
+            catch (Exception)
+            {
+                throw;
+            }
         }
 
         private static byte[] ByteArray(string file = null)
         {
+            var byteList = new List<byte>();
+
             byte[] bytes = File.ReadAllBytes(file);
             byte[] header = ConstructFileHeader(bytes);
 
             for (int i = 0; i < header.Length; i++)
             {
-                ByteList.Add(header[i]);
+                byteList.Add(header[i]);
             }
             
             for (int i = 0; i < bytes.Length; i++)
             {
-                ByteList.Add(bytes[i]);
+                byteList.Add(bytes[i]);
             }
 
-            // cool our list is full... now return it as an array to be appened to a file
-            return ByteList.ToArray();
+            return byteList.ToArray();
         }
       
     }
