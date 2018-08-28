@@ -6,18 +6,8 @@ using System.IO;
 namespace DataVisualizer
 {
     class Program
-    {
-       
-        /// <summary>
-        /// Main entry point
-        /// </summary>
-        /// <param name="args"></param>
+    {      
         static void Main(string[] args)
-        {
-            ParseArgs(args);            
-        }
-
-        private static void ParseArgs(string[] args)
         {
             if (args.Length == 0)
             {
@@ -26,6 +16,11 @@ namespace DataVisualizer
                 Environment.Exit(1);
             }
 
+            ParseArgs(args);            
+        }
+
+        private static void ParseArgs(string[] args)
+        {
             bool isFile = new FileInfo(args[0]).Exists;
             bool isFolder = new DirectoryInfo(args[0]).Exists;
 
@@ -37,9 +32,6 @@ namespace DataVisualizer
             if (isFolder)
             {
                 DirectoryInfo dir = new DirectoryInfo(args[0]);
-
-                if (!Directory.Exists($@"{dir.FullName}\output"))
-                    Directory.CreateDirectory($@"{dir.FullName}\output");
 
                 foreach (var item in dir.EnumerateFiles())
                 {
@@ -55,10 +47,12 @@ namespace DataVisualizer
 
         private static void ProcessFile(string file)
         {
+            Console.WriteLine($"Processing: {file}");
+
             FileInfo item = new FileInfo(file);
 
-            Console.WriteLine($"Processing: {item.Name}");
-         
+            byte[] bytes = GetByteArray(item.FullName);
+
             var outputDir = $"{item.DirectoryName}\\output";
             var outputFile = $"{outputDir}\\{item.Name}.bmp";
 
@@ -66,8 +60,6 @@ namespace DataVisualizer
             {
                 Directory.CreateDirectory(outputDir);
             }
-
-            byte[] bytes = ByteArray(item.FullName);
 
             AppendFile(bytes, outputFile);
         }
@@ -87,8 +79,6 @@ namespace DataVisualizer
                 {
                     bytes[i] = 0x00;
                 }
-
-                Debug.WriteLine(i + " " + bytes[i]);
             }
 
             return bytes;
@@ -203,30 +193,6 @@ namespace DataVisualizer
             header[53] = 0x00;  // 35
             #endregion
 
-            #region 2x2 Test Pixels
-            //header[54] = 0x00;  // 36
-            //header[55] = 0x00;  // 37
-            //header[56] = 0xFF;  // 38
-
-            //header[57] = 0xFF;  // 39
-            //header[58] = 0xFF;  // 3A
-            //header[59] = 0xFF;  // 3B
-
-            //header[60] = 0x00;  // 3C
-            //header[61] = 0x00;  // 3D
-
-            //header[62] = 0xFF;  // 3E
-            //header[63] = 0x00;  // 3F
-            //header[64] = 0x00;  // 40
-
-            //header[65] = 0x00;  // 41
-            //header[66] = 0xFF;  // 42
-            //header[67] = 0x00;  // 43
-
-            //header[68] = 0x00;  // 3C
-            //header[69] = 0x00;  // 3D
-            #endregion
-
             return header;
         }
 
@@ -242,11 +208,11 @@ namespace DataVisualizer
             }
         }
 
-        private static byte[] ByteArray(string file = null)
+        private static byte[] GetByteArray(string filePath)
         {
             var byteList = new List<byte>();
 
-            byte[] bytes = File.ReadAllBytes(file);
+            byte[] bytes = File.ReadAllBytes(filePath);
             byte[] header = ConstructFileHeader(bytes);
 
             for (int i = 0; i < header.Length; i++)
