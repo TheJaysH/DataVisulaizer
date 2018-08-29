@@ -9,11 +9,12 @@ namespace DataVisualizer
 {
     class Program
     {
-        private static int Mode = 0;        // Pixel calculation mode
-        private static int Direction = 0;   // read from top/bottom of array
-        private static int Width = 3;       // width unit
-        private static int Height = 12;     // height unit
-        private static int Scale = 1;       // scale unit
+        private static bool Reverse = false;    // read from top/bottom of array
+
+        private static int Mode = 0;            // Pixel calculation mode
+        private static int Width = 3;           // width unit
+        private static int Height = 12;         // height unit
+        private static int Scale = 1;           // scale unit
 
         static void Main(string[] args)
         {
@@ -101,7 +102,7 @@ namespace DataVisualizer
             var h = p * _height;
             var w = p * _width;
 
-            Debug.WriteLine(p);
+            //Debug.WriteLine(p);
 
             byte[] width = GetBytes(w);
             byte[] height = GetBytes(h);
@@ -227,54 +228,24 @@ namespace DataVisualizer
 
         private static byte[] GetByteArray(string filePath)
         {
-            var byteList = new List<byte>();
 
-            byte[] bytes = File.ReadAllBytes(filePath);
-            byte[] header = ConstructFileHeader(bytes, Width, Height, Scale);
+
+            List<byte> bytes = new List<byte>(File.ReadAllBytes(filePath));
+            List<byte> byteList = new List<byte>();
+
+            if (Reverse) bytes.Reverse();
+
+            byte[] header = ConstructFileHeader(bytes.ToArray(), Width, Height, Scale);
 
             for (int i = 0; i < header.Length; i++)
             {
                 byteList.Add(header[i]);
             }
-
-            #region ForLoop conditons
-
-            int iterator = Direction == 0 ? 0 : bytes.Length - 1;
-            int right = Direction == 0 ? bytes.Length : 0;
-
-            void increment(ref int i)
+         
+            for (int i = 0; i < bytes.Count; i++)           
+            //for (int i = iterator; condition(ref i, right); increment(ref i))
             {
-                switch (Direction)
-                {
-                    case 0:
-                        i++;
-                        break;
-                    case 1:
-                        i--;
-                        break;
-                    default:
-                        break;
-                }
-            }
-
-            bool condition(ref int i,  int j)
-            {
-                switch (Direction)
-                {
-                    case 0:
-                        return i < j;
-                    case 1:
-                        return i > j;        
-                    default:
-                        return false;                        
-                }
-            }
-
-            #endregion
-
-            for (int i = iterator; condition(ref i, right); increment(ref i))
-            {
-                Debug.WriteLine(i);
+                //Debug.WriteLine(bytes[i]);
                 switch (Mode)
                 {
                     case 0:
@@ -351,6 +322,7 @@ namespace DataVisualizer
                 {
                     // Red is the dominant color
                     case 0:
+                    case 6:
                         R = V;
                         G = tv;
                         B = pv;
@@ -382,13 +354,7 @@ namespace DataVisualizer
                         R = V;
                         G = pv;
                         B = qv;
-                        break;
-                    // Just in case we overshoot on our math by a little, we put these here. Since its a switch it won't slow us down at all to put these here.
-                    case 6:
-                        R = V;
-                        G = tv;
-                        B = pv;
-                        break;
+                        break;                    
                     case -1:
                         R = V;
                         G = pv;
@@ -397,7 +363,6 @@ namespace DataVisualizer
 
                     // The color is not defined, we should throw an error.
                     default:
-                        //LFATAL("i Value error in Pixel conversion, Value is %d", i);
                         R = G = B = V; // Just pretend its black/white
                         break;
                 }
