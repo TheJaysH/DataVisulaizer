@@ -1,23 +1,36 @@
-﻿//#define BACKWARDS
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Linq;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using NAudio;
+using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace DataVisualizer
 {
     class Program
     {
-        private static bool Reverse = false;    // read from top/bottom of array
-
-        private static int Mode = 0;            // Pixel calculation mode
-        private static int Width = 3;           // width unit
-        private static int Height = 12;         // height unit
-        private static int Scale = 1;           // scale unit
+        private static bool Reverse = true;     // read from top/bottom of array
+        private static bool Random = true;
+        private static readonly int Mode = 0;            // Pixel calculation mode [0 = byte for byte, 1 = greyscale, 2 = HSV]
+        private static readonly int Width = 2;           // width unit (aspect ratio)
+        private static readonly int Height = 2;         // height unit (aspect ratio)
 
         static void Main(string[] args)
         {
+            //if (Random)
+            //{
+            //    Gener
+            //}
+
+
+            //Console.WriteLine("Number Of Logical Processors: {0}", Environment.ProcessorCount);
             // Exit if no args have been passed
             if (args.Length == 0)
             {
@@ -25,8 +38,15 @@ namespace DataVisualizer
                 Console.ReadKey();
                 Environment.Exit(1);
             }
-            
-            ParseArgs(args);            
+
+            ParseArgs(args);
+        }
+
+        private static void ProcessFile(object param)
+        {
+            string file = (string)param;
+
+            ProcessFile(file);
         }
 
         private static void ParseArgs(string[] args)
@@ -36,14 +56,17 @@ namespace DataVisualizer
 
             if (folder.Exists)
             {
-                foreach (var item in folder.EnumerateFiles())
+                var files = folder.EnumerateFiles();
+                //Parallel.ForEach(files, (f) => ProcessFile(f.FullName));
+                foreach (var f in files)
                 {
-                    ProcessFile(item.FullName);
+                    ProcessFile(f.FullName);
                 }
             }
             else if (file.Exists)
             {
-                Process.Start(ProcessFile(file.FullName));
+                var output = ProcessFile(file.FullName);
+                Process.Start(output);
             }
             else
             {
@@ -73,6 +96,22 @@ namespace DataVisualizer
             return outputFile;
         }
 
+        public static byte[] GetRandomBytes()
+        {
+            var ran = new Random().Next(10000,1000000);
+            var bytes = new List<byte>();
+
+            for (int i = 0; i < ran; i++)
+            {
+                var b = new Random().Next(0,255);
+                bytes.AddRange(BitConverter.GetBytes(b));
+
+            }
+
+            return bytes.ToArray();
+
+        }
+
         private static byte[] GetBytes(int value, int length = 4)
         {
             byte[] bytes = new byte[length];
@@ -93,12 +132,12 @@ namespace DataVisualizer
             return bytes;
         }
 
-        private static byte[] ConstructFileHeader(byte[] bytes,int _width = 5, int _height = 5,int scale = 1)
+        private static byte[] ConstructFileHeader(byte[] bytes,int _width, int _height)
         {
             var sqrt = Math.Sqrt(bytes.Length);
             var t = (int)Math.Round(sqrt, 0);
 
-            var p = (t / (_height + _width) * scale);
+            var p = (t / (_height + _width));
             var h = p * _height;
             var w = p * _width;
 
@@ -228,28 +267,54 @@ namespace DataVisualizer
 
         private static byte[] GetByteArray(string filePath)
         {
-
-
             List<byte> bytes = new List<byte>(File.ReadAllBytes(filePath));
+            //List<byte> bytes = new List<byte>(GetRandomBytes());
             List<byte> byteList = new List<byte>();
 
             if (Reverse) bytes.Reverse();
 
-            byte[] header = ConstructFileHeader(bytes.ToArray(), Width, Height, Scale);
+            byte[] header = ConstructFileHeader(bytes.ToArray(), Width, Height);
 
             for (int i = 0; i < header.Length; i++)
             {
                 byteList.Add(header[i]);
             }
-         
-            for (int i = 0; i < bytes.Count; i++)           
-            //for (int i = iterator; condition(ref i, right); increment(ref i))
+    
+
+
+            for (int i = 0; i < bytes.Count; i++)
             {
+                var value = int.Parse(bytes[i].ToString(), System.Globalization.NumberStyles.HexNumber);
+                //PlayBeep((ushort)(value * 50), 7);
                 //Debug.WriteLine(bytes[i]);
+
+
+
+                var sine20Seconds = new SignalGenerator()
+                {
+                    Gain = 0.2,
+                    Frequency = 10 * value,
+                    Type = SignalGeneratorType.Sin
+                }
+                .Take(TimeSpan.FromMilliseconds(1));
+                using (var wo = new WaveOutEvent())
+                {
+                    wo.Init(sine20Seconds);
+                    wo.Play();
+                    while (wo.PlaybackState == PlaybackState.Playing)
+                    {
+                        //Thread.Sleep(1);
+                    }
+                }
+
                 switch (Mode)
                 {
                     case 0:
+                        //byteList.Add(bytes[i - 1]);
+
                         byteList.Add(bytes[i]);
+                        //byteList.Add(bytes[i-2]);
+                        //byteList.Add(bytes[i-3]);
                         break;
                     case 1:
                         byteList.Add(bytes[i]);
@@ -272,9 +337,60 @@ namespace DataVisualizer
             return byteList.ToArray();
         }
 
+        public static void PlayBeep(UInt16 frequency, int msDuration, UInt16 volume = 16383)
+        {
+            var mStrm = new MemoryStream();
+            BinaryWriter writer = new BinaryWriter(mStrm);
+
+            const double TAU = 2 * Math.PI;
+            int formatChunkSize = 16;
+            int headerSize = 8;
+            short formatType = 1;
+            short tracks = 1;
+            int samplesPerSecond = 44100;
+            short bitsPerSample = 16;
+            short frameSize = (short)(tracks * ((bitsPerSample + 7) / 8));
+            int bytesPerSecond = samplesPerSecond * frameSize;
+            int waveSize = 4;
+            int samples = (int)((decimal)samplesPerSecond * msDuration / 1000);
+            int dataChunkSize = samples * frameSize;
+            int fileSize = waveSize + headerSize + formatChunkSize + headerSize + dataChunkSize;
+            // var encoding = new System.Text.UTF8Encoding();
+            writer.Write(0x46464952); // = encoding.GetBytes("RIFF")
+            writer.Write(fileSize);
+            writer.Write(0x45564157); // = encoding.GetBytes("WAVE")
+            writer.Write(0x20746D66); // = encoding.GetBytes("fmt ")
+            writer.Write(formatChunkSize);
+            writer.Write(formatType);
+            writer.Write(tracks);
+            writer.Write(samplesPerSecond);
+            writer.Write(bytesPerSecond);
+            writer.Write(frameSize);
+            writer.Write(bitsPerSample);
+            writer.Write(0x61746164); // = encoding.GetBytes("data")
+            writer.Write(dataChunkSize);
+            {
+                double theta = frequency * TAU / (double)samplesPerSecond;
+                // 'volume' is UInt16 with range 0 thru Uint16.MaxValue ( = 65 535)
+                // we need 'amp' to have the range of 0 thru Int16.MaxValue ( = 32 767)
+                double amp = volume >> 2; // so we simply set amp = volume / 2
+                for (int step = 0; step < samples; step++)
+                {
+                    short s = (short)(amp * Math.Sin(theta * (double)step));
+                    writer.Write(s);
+                }
+            }
+
+            mStrm.Seek(0, SeekOrigin.Begin);
+            new System.Media.SoundPlayer(mStrm).Play();
+            writer.Close();
+            mStrm.Close();
+            mStrm.Dispose();
+        }
+
+
         /// <summary>
-        /// Takes Hue, Saturation and Vibrance. returns an RGB value
-        /// ========================================================
+        /// Takes Hue, Saturation and Vibrance. returns an RGB value.
         /// This is not my code, however i have modified it as best i can to clean it up.
         /// Im still new to colour conversion. and im sure there is an internal method of doing this.
         /// I will refactor in the future.
@@ -285,10 +401,9 @@ namespace DataVisualizer
         /// <param name="S"></param>
         /// <param name="V"></param>
         /// <returns></returns>
-        private static RGB HsvToRgb(double h, double S, double V)
+        private static RGB HsvToRgb(double H, double S, double V)
         {
             double R, G, B;
-            double H = h;
             int r, g, b;
 
             while (H < 0)
@@ -386,6 +501,7 @@ namespace DataVisualizer
             if (i > 255) return 255;
             return i;
         }
+        
 
         public class RGB
         {
